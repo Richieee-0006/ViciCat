@@ -246,10 +246,26 @@ class MenuGenerator:
     """Generates native Vicinae extension and updates Vicinae settings.json."""
 
     SKIP_DESKTOP_CATEGORIES = {"X-LSP-Plugins"}
+    SKIP_APP_NAMES = {"Steamworks SDK Redist", "Steamworks Common Redistributables", "Proton"}
 
     def __init__(self):
         self._icon_cache: Dict[str, Optional[str]] = {}
         self._icon_search_dirs = self._build_icon_search_dirs()
+
+    def _get_disabled_apps(self) -> set:
+        disabled = set()
+        if not VICINAE_CONFIG_PATH.exists():
+            return disabled
+        try:
+            raw = self._strip_jsonc_comments(VICINAE_CONFIG_PATH.read_text(encoding="utf-8"))
+            cfg = json.loads(raw)
+            eps = cfg.get("providers", {}).get("applications", {}).get("entrypoints", {})
+            for app_id, meta in eps.items():
+                if isinstance(meta, dict) and meta.get("enabled") is False:
+                    disabled.add(app_id)
+        except Exception:
+            pass
+        return disabled
 
     def _build_icon_search_dirs(self) -> List[Path]:
         dirs = []
@@ -340,12 +356,17 @@ class MenuGenerator:
         dry_run: bool = False,
         restart: bool = True,
     ) -> bool:
+        disabled_apps = self._get_disabled_apps()
         by_category: Dict[str, List[DesktopEntry]] = {}
         for filename, category in categorized.items():
             entry = entries.get(filename)
             if not entry:
                 continue
+            if entry.app_id in disabled_apps:
+                continue
             if any(c in self.SKIP_DESKTOP_CATEGORIES for c in entry.categories):
+                continue
+            if any(skip.lower() in entry.name.lower() for skip in self.SKIP_APP_NAMES):
                 continue
             by_category.setdefault(category, []).append(entry)
 
@@ -356,6 +377,15 @@ class MenuGenerator:
 
         for cat in by_category:
             by_category[cat].sort(key=lambda e: (-get_count(e.filename), e.name.lower()))
+            # Deduplicate identical display names within same category (keep highest-usage entry)
+            seen_names = set()
+            deduped = []
+            for e in by_category[cat]:
+                norm = e.name.strip().lower()
+                if norm not in seen_names:
+                    seen_names.add(norm)
+                    deduped.append(e)
+            by_category[cat] = deduped
 
         category_list = list(by_category.keys())
         category_list.sort(
