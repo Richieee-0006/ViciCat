@@ -116,8 +116,9 @@ class AppCategorizer:
             "model": self.active_model,
             "prompt": prompt,
             "format": "json",
+            "think": False,
             "stream": False,
-            "options": {"temperature": 0.1, "num_predict": 2048},
+            "options": {"temperature": 0.1, "num_predict": 1024},
         }
         resp = requests.post(f"{self.local_url}/api/generate", json=payload, timeout=TIMEOUT)
         resp.raise_for_status()

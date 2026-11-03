@@ -29,10 +29,13 @@ class DesktopEntry:
     def is_obvious_game(self) -> bool:
         exec_lower = self.exec_cmd.lower()
         comment_lower = self.comment.lower()
+        name_lower = self.name.lower()
         return (
             "steam://rungameid/" in exec_lower
             or "lutris:rungame" in exec_lower
             or "heroic://launch" in exec_lower
+            or "prismlauncher" in exec_lower
+            or "prism launcher" in name_lower
             or "play this game on steam" in comment_lower
             or "Game" in self.categories
         )
