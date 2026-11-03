@@ -1,0 +1,17 @@
+#!/bin/bash
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+VENV_PATH="${VICICAT_VENV:-$SCRIPT_DIR/.venv}"
+
+if [ -d "$VENV_PATH" ]; then
+    source "$VENV_PATH/bin/activate"
+elif [ -d "$HOME/Projects/CatWalker/.venv" ]; then
+    source "$HOME/Projects/CatWalker/.venv/bin/activate"
+fi
+
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a
+    source "$SCRIPT_DIR/.env"
+    set +a
+fi
+
+exec python3 "$SCRIPT_DIR/main.py" "$@"
